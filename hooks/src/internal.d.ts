@@ -47,14 +47,20 @@ export type Effect = () => void | Cleanup;
 export type Cleanup = () => void;
 
 export interface EffectHookState {
+	 // effect hook的回调函数
 	_value?: Effect;
+	// 依赖项
 	_args?: any[];
+	// effect hook的清理函数，_value的返回值
 	_cleanup?: Cleanup | void;
 }
 
 export interface MemoHookState {
+	 // useMemo的返回值
 	_value?: any;
+	// 前一个的依赖数组
 	_args?: any[];
+	// usememo 传入的callback
 	_factory?: () => any;
 }
 

@@ -10,6 +10,7 @@ import { Fragment } from './create-element';
  * @param {object} context The initial context from parent components'
  * getChildContext
  */
+ // 基础组件类。提供 `setState()` 和 `forceUpdate()`， 触发渲染
 export function Component(props, context) {
 	this.props = props;
 	this.context = context;
@@ -40,6 +41,7 @@ Component.prototype.setState = function(update, callback) {
 	}
 
 	if (update) {
+		// 这就是把处理后的state 放到nextState
 		assign(s, update);
 	}
 
@@ -48,6 +50,7 @@ Component.prototype.setState = function(update, callback) {
 
 	if (this._vnode) {
 		if (callback) this._renderCallbacks.push(callback);
+		// 把当前组件加入待渲染队列并渲染
 		enqueueRender(this);
 	}
 };
@@ -65,6 +68,7 @@ Component.prototype.forceUpdate = function(callback) {
 		// shouldComponentUpdate
 		this._force = true;
 		if (callback) this._renderCallbacks.push(callback);
+		// 设置_force来标记是强制渲染，然后加入渲染队列并渲染。如果_force为真，则在diff渲染中不会触发组件的某些生命周期。
 		enqueueRender(this);
 	}
 };
@@ -87,6 +91,7 @@ Component.prototype.render = Fragment;
  */
 export function getDomSibling(vnode, childIndex) {
 	if (childIndex == null) {
+		// 从 vnode 的兄弟节点继续搜索
 		// Use childIndex==null as a signal to resume the search from the vnode's sibling
 		return vnode._parent
 			? getDomSibling(vnode._parent, vnode._parent._children.indexOf(vnode) + 1)
@@ -104,12 +109,18 @@ export function getDomSibling(vnode, childIndex) {
 			return sibling._dom;
 		}
 	}
+	// 如果我们到达这里，我们还没有在这个 vnode 的子节点中找到一个 DOM 节点。
+	// 我们必须从这个 vnode 的兄弟节点（在它的父 _children 数组中）恢复
+	// 如果我们不通过 DOM 搜索，只爬上去搜索父节点
+	// VNode（意味着我们到达了开始的原始 vnode 的 DOM 父级）
+	// 搜索）
 
 	// If we get here, we have not found a DOM node in this vnode's children.
 	// We must resume from this vnode's sibling (in it's parent _children array)
 	// Only climb up and search the parent if we aren't searching through a DOM
 	// VNode (meaning we reached the DOM parent of the original vnode that began
 	// the search)
+	// 这个情况下 childIndex 为 null
 	return typeof vnode.type == 'function' ? getDomSibling(vnode) : null;
 }
 
@@ -117,6 +128,7 @@ export function getDomSibling(vnode, childIndex) {
  * Trigger in-place re-rendering of a component.
  * @param {import('./internal').Component} component The component to rerender
  */
+// 渲染组件
 function renderComponent(component) {
 	let vnode = component._vnode,
 		oldDom = vnode._dom,
@@ -126,7 +138,7 @@ function renderComponent(component) {
 		let commitQueue = [];
 		const oldVNode = assign({}, vnode);
 		oldVNode._original = vnode._original + 1;
-
+    //比较渲染
 		diff(
 			parentDom,
 			vnode,
@@ -138,8 +150,9 @@ function renderComponent(component) {
 			oldDom == null ? getDomSibling(vnode) : oldDom,
 			vnode._hydrating
 		);
+		 // 渲染完成时执行did生命周期和setState回调
 		commitRoot(commitQueue, vnode);
-
+		// 如果newDom与oldDom不一致，则调用updateParentDomPointers
 		if (vnode._dom != oldDom) {
 			updateParentDomPointers(vnode);
 		}
@@ -168,15 +181,17 @@ function updateParentDomPointers(vnode) {
  * The render queue
  * @type {Array<import('./internal').Component>}
  */
+// 待渲染组件队列
 let rerenderQueue = [];
 
 /**
  * Asynchronously schedule a callback
  * @type {(cb: () => void) => void}
  */
+//异步调度器。如果支持Promise则会用Promise，否则用setTimeout
 /* istanbul ignore next */
 // Note the following line isn't tree-shaken by rollup cuz of rollup/rollup#2566
-const defer =
+const defer = //等同于 Promise.resolve().then。
 	typeof Promise == 'function'
 		? Promise.prototype.then.bind(Promise.resolve())
 		: setTimeout;
@@ -192,32 +207,42 @@ const defer =
 
 let prevDebounce;
 
-/**
+/** 将组件的重新渲染排入队列
  * Enqueue a rerender of a component
  * @param {import('./internal').Component} c The component to rerender
  */
 export function enqueueRender(c) {
+	  // 如果_dirty为false则设为true
+   // 然后把组件加入队列中
+   // 自加加rerenderCount并且如果为0则触发渲染
+
 	if (
 		(!c._dirty &&
 			(c._dirty = true) &&
 			rerenderQueue.push(c) &&
-			!process._rerenderCount++) ||
+			!process._rerenderCount++) ||  // process._rerenderCount 为 0  才会为true ,>0 的值为 false
 		prevDebounce !== options.debounceRendering
 	) {
 		prevDebounce = options.debounceRendering;
+		//执行process
 		(prevDebounce || defer)(process);
 	}
 }
-
+// 通过重新渲染所有排队的组件来刷新渲染队列
+// 遍历队列渲染组件
 /** Flush the render queue by rerendering all queued components */
 function process() {
 	let queue;
 	while ((process._rerenderCount = rerenderQueue.length)) {
+		//按深度排序，最顶级的组件的最先执行
 		queue = rerenderQueue.sort((a, b) => a._vnode._depth - b._vnode._depth);
 		rerenderQueue = [];
+	  // 暂时不要更新 `renderCount`。保持其值非零以防止不必要的
+    // process() 在 `queue` 仍然被消耗时被调度调用。
 		// Don't update `renderCount` yet. Keep its value non-zero to prevent unnecessary
 		// process() calls from getting scheduled while `queue` is still being consumed.
 		queue.some(c => {
+			 //如果组件需要渲染则渲染它
 			if (c._dirty) renderComponent(c);
 		});
 	}

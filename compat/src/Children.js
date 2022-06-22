@@ -6,6 +6,7 @@ const mapFn = (children, fn) => {
 };
 
 // This API is completely unnecessary for Preact, so it's basically passthrough.
+// Preact 完全不需要这个 API，所以它基本上是直通的。
 export const Children = {
 	map: mapFn,
 	forEach: mapFn,

@@ -27,6 +27,9 @@ function createVNode(type, props, key, __self, __source) {
 	// We'll want to preserve `ref` in props to get rid of the need for
 	// forwardRef components in the future, but that should happen via
 	// a separate PR.
+	//我们希望在 props 中保留 `ref` 以摆脱对
+  // 未来的 forwardRef 组件，但这应该通过
+  // 一个单独的 PR。
 	let normalizedProps = {},
 		ref,
 		i;
@@ -55,7 +58,8 @@ function createVNode(type, props, key, __self, __source) {
 		__source,
 		__self
 	};
-
+	  // 如果是组件 VNode，请检查并应用 defaultProps。
+	// 注意：`type` 通常是 String，在开发中可以是 `undefined`。
 	// If a Component VNode, check for and apply defaultProps.
 	// Note: `type` is often a String, and can be `undefined` in development.
 	if (typeof type === 'function' && (ref = type.defaultProps)) {

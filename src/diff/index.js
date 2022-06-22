@@ -48,10 +48,11 @@ export function diff(
 		newVNode._hydrating = null;
 		excessDomChildren = [oldDom];
 	}
-
+	// Attach a hook that is invoked before a vnode is diffed.
 	if ((tmp = options._diff)) tmp(newVNode);
 
 	try {
+		// 如果是类组件或者函数组件
 		outer: if (typeof newType == 'function') {
 			let c, isNew, oldProps, oldState, snapshot, clearProcessingException;
 			let newProps = newVNode.props;
@@ -59,7 +60,10 @@ export function diff(
 			// Necessary for createContext api. Setting this property will pass
 			// the context value as `this.context` just for this component.
 			tmp = newType.contextType;
+			//找到所属的provider组件
 			let provider = tmp && globalContext[tmp._id];
+			 //有tmp时，如果提供provider时为provider的value，不然为createContext的defaultValue
+    //没有则为父节点传递下来的context
 			let componentContext = tmp
 				? provider
 					? provider.props.value
@@ -67,6 +71,7 @@ export function diff(
 				: globalContext;
 
 			// Get component and set it to `c`
+			//如果已经存在实例化的组件
 			if (oldVNode._component) {
 				c = newVNode._component = oldVNode._component;
 				clearProcessingException = c._processingException = c._pendingError;
@@ -76,11 +81,15 @@ export function diff(
 					// @ts-ignore The check above verifies that newType is suppose to be constructed
 					newVNode._component = c = new newType(newProps, componentContext); // eslint-disable-line new-cap
 				} else {
+					//函数组件的话会实例化Component
 					// @ts-ignore Trust me, Component implements the interface we want
 					newVNode._component = c = new Component(newProps, componentContext);
 					c.constructor = newType;
+					// 设置render
 					c.render = doRender;
 				}
+				// 如果某个子孙节点组件设置了contextType静态属性，会调用sub方法把该组件添加到订阅数组中。
+				//订阅，当provider组件value改变时，渲染组件
 				if (provider) provider.sub(c);
 
 				c.props = newProps;
@@ -110,6 +119,7 @@ export function diff(
 			oldState = c.state;
 
 			// Invoke pre-render lifecycle methods
+			// 如果是新创建的组件
 			if (isNew) {
 				if (
 					newType.getDerivedStateFromProps == null &&
@@ -127,9 +137,10 @@ export function diff(
 					newProps !== oldProps &&
 					c.componentWillReceiveProps != null
 				) {
+					//没有设置getDerivedStateFromProps并且设置了componentWillReceiveProps则执行此生命周期
 					c.componentWillReceiveProps(newProps, componentContext);
 				}
-
+				// 如果不是forceUpdate并且设置了shouldComponentUpdate则执行此生命周期在返回false的情况下
 				if (
 					(!c._force &&
 						c.shouldComponentUpdate != null &&
@@ -154,6 +165,7 @@ export function diff(
 						commitQueue.push(c);
 					}
 
+					// 就不继续走下去了
 					break outer;
 				}
 
@@ -172,7 +184,7 @@ export function diff(
 			c.props = newProps;
 			c._vnode = newVNode;
 			c._parentDom = parentDom;
-
+    /** Attach a hook that is invoked before a vnode has rendered. */
 			let renderHook = options._render,
 				count = 0;
 			if ('prototype' in newType && newType.prototype.render) {
@@ -180,11 +192,12 @@ export function diff(
 				c._dirty = false;
 
 				if (renderHook) renderHook(newVNode);
-
+       //执行render
 				tmp = c.render(c.props, c.state, c.context);
 			} else {
 				do {
 					c._dirty = false;
+					/** Attach a hook that is invoked before a vnode has rendered. */
 					if (renderHook) renderHook(newVNode);
 
 					tmp = c.render(c.props, c.state, c.context);
@@ -196,7 +209,7 @@ export function diff(
 
 			// Handle setState called in render, see #2553
 			c.state = c._nextState;
-
+     // 如果是Provider组件，然后调用getChildContext获取ctx对象并向下传递
 			if (c.getChildContext != null) {
 				globalContext = assign(assign({}, globalContext), c.getChildContext());
 			}
@@ -243,6 +256,7 @@ export function diff(
 			newVNode._children = oldVNode._children;
 			newVNode._dom = oldVNode._dom;
 		} else {
+			// 对比html标签节点
 			newVNode._dom = diffElementNodes(
 				oldVNode._dom,
 				newVNode,
@@ -276,9 +290,13 @@ export function diff(
  * @param {import('../internal').VNode} root
  */
 export function commitRoot(commitQueue, root) {
+		/** Attach a hook that is invoked after a tree was mounted or was updated. */
 	if (options._commit) options._commit(root, commitQueue);
 
 	commitQueue.some(c => {
+		// _renderCallbacks是指在preact中指每次 render 后，
+		// 同步执行的操作回调列表，例如setState的第二个参数 cb、
+		//  或者一些render后的生命周期函数、或者forceUpdate的回调）
 		try {
 			// @ts-ignore Reuse the commitQueue variable here so the type changes
 			commitQueue = c._renderCallbacks;
@@ -322,10 +340,12 @@ function diffElementNodes(
 	let nodeType = newVNode.type;
 	let i = 0;
 
+  // 判断是否是svg
 	// Tracks entering and exiting SVG namespace when descending through the tree.
 	if (nodeType === 'svg') isSvg = true;
 
 	if (excessDomChildren != null) {
+		//  判断能否复用excessDomChildren中的dom
 		for (; i < excessDomChildren.length; i++) {
 			const child = excessDomChildren[i];
 
@@ -335,21 +355,26 @@ function diffElementNodes(
 			if (
 				child &&
 				'setAttribute' in child === !!nodeType &&
+				//如果虚拟节点类型为null而存在节点类型是text或者虚拟节点类型和存在节点类型相同
+				// nodeType == null child.nodeType === 3
+				// child.localName === nodeType
 				(nodeType ? child.localName === nodeType : child.nodeType === 3)
 			) {
 				dom = child;
+				//设置对应的存在节点为空
 				excessDomChildren[i] = null;
 				break;
 			}
 		}
 	}
-
+  // 说明没有匹配的旧children
 	if (dom == null) {
 		if (nodeType === null) {
 			// @ts-ignore createTextNode returns Text, we expect PreactElement
 			return document.createTextNode(newProps);
 		}
 
+	  //创建元素
 		if (isSvg) {
 			dom = document.createElementNS(
 				'http://www.w3.org/2000/svg',
@@ -363,14 +388,15 @@ function diffElementNodes(
 				newProps.is && newProps
 			);
 		}
-
+ // 以下流程中excessDomChildren表示dom的子节点，这儿的dom是新创建的，所以要设为null，表示不可复用子节点
 		// we created a new parent, so none of the previously attached children can be reused:
 		excessDomChildren = null;
 		// we are creating a new node, so we can assume this is a new subtree (in case we are hydrating), this deopts the hydrate
 		isHydrating = false;
 	}
-
+  //如果是text节点
 	if (nodeType === null) {
+		//如果内容不相等，则设置data来更新TextNode的文本
 		// During hydration, we still have to split merged text from SSR'd HTML.
 		if (oldProps !== newProps && (!isHydrating || dom.data !== newProps)) {
 			dom.data = newProps;
@@ -387,6 +413,7 @@ function diffElementNodes(
 		// During hydration, props are not diffed at all (including dangerouslySetInnerHTML)
 		// @TODO we should warn in debug mode when props don't match here.
 		if (!isHydrating) {
+			 //如果是非hydration模式则执行以下，因为hydration模式不会处理props
 			// But, if we are in a situation where we are using existing DOM (e.g. replaceNode)
 			// we should read the existing DOM attributes to diff them
 			if (excessDomChildren != null) {
@@ -407,7 +434,7 @@ function diffElementNodes(
 				}
 			}
 		}
-
+  //对比元素的属性
 		diffProps(dom, newProps, oldProps, isSvg, isHydrating);
 
 		// If the new vnode didn't have dangerouslySetInnerHTML, diff its children
@@ -439,7 +466,7 @@ function diffElementNodes(
 		}
 
 		// (as above, don't diff props during hydration)
-		if (!isHydrating) {
+		if (!isHydrating) { // 没有预渲染或者服务端渲染
 			if (
 				'value' in newProps &&
 				(i = newProps.value) !== undefined &&

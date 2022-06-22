@@ -33,6 +33,7 @@ function Portal(props) {
 
 	// When props.vnode is undefined/false/null we are dealing with some kind of
 	// conditional vnode. This should not trigger a render.
+	// 当 props.vnode 是 undefined/false/null 我们正在处理某种 条件 vnode。这不应触发渲染
 	if (props._vnode) {
 		if (!_this._temp) {
 			_this._container = container;
@@ -65,6 +66,7 @@ function Portal(props) {
 	}
 	// When we come from a conditional render, on a mounted
 	// portal we should clear the DOM.
+	// 当我们来自条件渲染时，在已安装的 portal 我们应该清除 DOM。
 	else if (_this._temp) {
 		_this.componentWillUnmount();
 	}

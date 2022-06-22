@@ -20,6 +20,7 @@ export function diffProps(dom, newProps, oldProps, isSvg, hydrate) {
 	}
 
 	for (i in newProps) {
+		// 如果 属性名不为value，checked 并且新的属性值不等于老的属性值 则执行setProperty
 		if (
 			(!hydrate || typeof newProps[i] == 'function') &&
 			i !== 'children' &&
@@ -56,6 +57,7 @@ function setStyle(style, key, value) {
 export function setProperty(dom, name, value, oldValue, isSvg) {
 	let useCapture;
 
+	// 样式
 	o: if (name === 'style') {
 		if (typeof value == 'string') {
 			dom.style.cssText = value;
@@ -82,7 +84,7 @@ export function setProperty(dom, name, value, oldValue, isSvg) {
 		}
 	}
 	// Benchmark for comparison: https://esbench.com/bench/574c954bdb965b9a00965ac6
-	else if (name[0] === 'o' && name[1] === 'n') {
+	else if (name[0] === 'o' && name[1] === 'n') { // 事件绑定
 		useCapture = name !== (name = name.replace(/Capture$/, ''));
 
 		// Infer correct casing for DOM built-in events:
@@ -102,12 +104,12 @@ export function setProperty(dom, name, value, oldValue, isSvg) {
 			dom.removeEventListener(name, handler, useCapture);
 		}
 	} else if (name !== 'dangerouslySetInnerHTML') {
-		if (isSvg) {
+		if (isSvg) { // svg
 			// Normalize incorrect prop usage for SVG:
 			// - xlink:href / xlinkHref --> href (xlink:href was removed from SVG and isn't needed)
 			// - className --> class
 			name = name.replace(/xlink(H|:h)/, 'h').replace(/sName$/, 's');
-		} else if (
+		} else if ( // 非svg
 			name !== 'href' &&
 			name !== 'list' &&
 			name !== 'form' &&
@@ -149,6 +151,7 @@ export function setProperty(dom, name, value, oldValue, isSvg) {
  * @param {Event} e The event object from the browser
  * @private
  */
+//如果存在options.event则先执行钩子
 function eventProxy(e) {
 	this._listeners[e.type + false](options.event ? options.event(e) : e);
 }
