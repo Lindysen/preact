@@ -16,6 +16,8 @@ let currentHook = 0;
 /** @type {Array<import('./internal').Component>} */
 let afterPaintEffects = [];
 
+let EMPTY = [];
+
 let oldBeforeDiff = options._diff;
 let oldBeforeRender = options._render;
 let oldAfterDiff = options.diffed;
@@ -46,7 +48,8 @@ options._render = vnode => {
 			hooks._pendingEffects = [];
 			currentComponent._renderCallbacks = [];
 			hooks._list.forEach(hookItem => {
-				if (hookItem._args) hookItem._args = undefined;
+				hookItem._pendingValue = EMPTY;
+				hookItem._pendingArgs = undefined;
 			});
 		} else { // mount 阶段
 			// 执行清理操作
@@ -63,14 +66,23 @@ options.diffed = vnode => {
 	if (oldAfterDiff) oldAfterDiff(vnode);
 
 	const c = vnode._component;
-	// 下面会提到useEffect就是进入_pendingEffects队列
-	if (c && c.__hooks && c.__hooks._pendingEffects.length) {
+		// 下面会提到useEffect就是进入_pendingEffects队列
+	if (c && c.__hooks) {
+		if (c.__hooks._pendingEffects.length) afterPaint(afterPaintEffects.push(c));
 		// afterPaint 表示本次帧绘制完，下一帧开始前执行
-		afterPaint(afterPaintEffects.push(c));
 		// 将含有_pendingEffects的组件推进全局的afterPaintEffects队列中
+		c.__hooks._list.forEach(hookItem => {
+			if (hookItem._pendingArgs) {
+				hookItem._args = hookItem._pendingArgs;
+			}
+			if (hookItem._pendingValue !== EMPTY) {
+				hookItem._value = hookItem._pendingValue;
+			}
+			hookItem._pendingArgs = undefined;
+			hookItem._pendingValue = EMPTY;
+		});
 	}
-	currentComponent = null;
-	previousComponent = null;
+	previousComponent = currentComponent = null;
 };
 
 options._commit = (vnode, commitQueue) => {
@@ -145,7 +157,7 @@ function getHookState(index, type) {
 		});
   // 初始化的时候，创建一个空的hook
 	if (index >= hooks._list.length) {
-		hooks._list.push({});
+		hooks._list.push({ _pendingValue: EMPTY });
 	}
 	return hooks._list[index];
 }
@@ -203,8 +215,9 @@ export function useEffect(callback, args) {
 	const state = getHookState(currentIndex++, 3);
 	if (!options._skipEffects && argsChanged(state._args, args)) {
 		state._value = callback;
-		state._args = args;
-		// _pendingEffects则是本次重绘之后，下次重绘之前执行
+		state._pendingArgs = args;
+
+    // _pendingEffects则是本次重绘之后，下次重绘之前执行
 		currentComponent.__hooks._pendingEffects.push(state);
 	}
 }
@@ -219,7 +232,7 @@ export function useLayoutEffect(callback, args) {
 	const state = getHookState(currentIndex++, 4);
 	if (!options._skipEffects && argsChanged(state._args, args)) {
 		state._value = callback;
-		state._args = args;
+		state._pendingArgs = args;
 
 		//_renderCallbacks 是在_commit 钩子中执行
 		// renderCallback 就是render后的回调
@@ -264,10 +277,11 @@ export function useMemo(factory, args) {
 	 // 判断依赖项是否改变， 只是普通的===比较，如果依赖的引用类型并且改变引用类型的上的属性 将不会执行callback
 	if (argsChanged(state._args, args)) {
     // 改变后执行callback的函数返回值
-		state._value = factory();
+		state._pendingValue = factory();
 		//存储本次依赖的数据值
-		state._args = args;
+		state._pendingArgs = args;
 		state._factory = factory;
+		return state._pendingValue;
 	}
 
 	return state._value;

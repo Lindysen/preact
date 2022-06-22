@@ -10,7 +10,7 @@ export const REACT_ELEMENT_TYPE =
 	(typeof Symbol != 'undefined' && Symbol.for && Symbol.for('react.element')) ||
 	0xeac7;
 
-const CAMEL_PROPS = /^(?:accent|alignment|arabic|baseline|cap|clip(?!PathU)|color|dominant|fill|flood|font|glyph(?!R)|horiz|marker(?!H|W|U)|overline|paint|stop|strikethrough|stroke|text(?!L)|underline|unicode|units|v|vector|vert|word|writing|x(?!C))[A-Z]/;
+const CAMEL_PROPS = /^(?:accent|alignment|arabic|baseline|cap|clip(?!PathU)|color|dominant|fill|flood|font|glyph(?!R)|horiz|marker(?!H|W|U)|overline|paint|shape|stop|strikethrough|stroke|text(?!L)|underline|unicode|units|v|vector|vert|word|writing|x(?!C))[A-Z]/;
 
 const IS_DOM = typeof document !== 'undefined';
 
@@ -159,6 +159,15 @@ options.vnode = vnode => {
 				i = i.replace(/[A-Z0-9]/, '-$&').toLowerCase();
 			} else if (value === null) {
 				value = undefined;
+			}
+
+			// Add support for onInput and onChange, see #3561
+			// if we have an oninput prop already change it to oninputCapture
+			if (/^oninput$/i.test(i)) {
+				i = i.toLowerCase();
+				if (normalizedProps[i]) {
+					i = 'oninputCapture';
+				}
 			}
 
 			normalizedProps[i] = value;
