@@ -223,8 +223,8 @@ export function diff(
 			let renderResult = isTopLevelFragment ? tmp.props.children : tmp;
 
 			diffChildren(
-				parentDom,
-				Array.isArray(renderResult) ? renderResult : [renderResult],
+				parentDom, // 父级dom
+				Array.isArray(renderResult) ? renderResult : [renderResult],// 本次的新渲染结果
 				newVNode,
 				oldVNode,
 				globalContext,
@@ -241,6 +241,8 @@ export function diff(
 			newVNode._hydrating = null;
 
 			if (c._renderCallbacks.length) {
+				// render之后的生命周期将放在commitQueue队列中，将按照子进队、父进队的形式进入，
+				// 因此commitRoot的some调用时，render后的生命周期将是子->父。
 				commitQueue.push(c);
 			}
 
@@ -250,6 +252,7 @@ export function diff(
 
 			c._force = false;
 		} else if (
+			// parentDom子节点为null且_original相同时，不走diff流程，直接赋值即可。
 			excessDomChildren == null &&
 			newVNode._original === oldVNode._original
 		) {
@@ -257,6 +260,7 @@ export function diff(
 			newVNode._dom = oldVNode._dom;
 		} else {
 			// 对比html标签节点
+			// 标签元素的正常diff流程，使用diffElementNodes完成标签元素的diff。
 			newVNode._dom = diffElementNodes(
 				oldVNode._dom,
 				newVNode,
@@ -313,6 +317,7 @@ export function commitRoot(commitQueue, root) {
 
 /**
  * Diff two virtual nodes representing DOM element
+ * 区分表示 DOM 元素的两个虚拟节点
  * @param {import('../internal').PreactElement} dom The DOM element representing
  * the virtual nodes being diffed
  * @param {import('../internal').VNode} newVNode The new virtual node
@@ -367,7 +372,8 @@ function diffElementNodes(
 			}
 		}
 	}
-  // 说明没有匹配的旧children
+  // 说明oldVnode._dom == null
+	// 由于是第一次渲染所以不能复用原有的dom, 需要创建dom节点
 	if (dom == null) {
 		if (nodeType === null) {
 			// @ts-ignore createTextNode returns Text, we expect PreactElement
@@ -394,6 +400,7 @@ function diffElementNodes(
 		// we are creating a new node, so we can assume this is a new subtree (in case we are hydrating), this deopts the hydrate
 		isHydrating = false;
 	}
+
   //如果是text节点
 	if (nodeType === null) {
 		//如果内容不相等，则设置data来更新TextNode的文本
@@ -443,8 +450,8 @@ function diffElementNodes(
 		} else {
 			i = newVNode.props.children;
 			diffChildren(
-				dom,
-				Array.isArray(i) ? i : [i],
+				dom, // oldVNode._dom
+				Array.isArray(i) ? i : [i], // renderResult
 				newVNode,
 				oldVNode,
 				globalContext,

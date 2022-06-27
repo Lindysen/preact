@@ -40,7 +40,7 @@ options._render = vnode => {
 	currentComponent = vnode._component;
 	currentIndex = 0;
 	// 在每一次render过程中是从0 开始的 ，每执行一次useXX 后加一 每个hook 在多次render中对于记录前一次的执行状态正是通过
-	// currentComponent._hoos
+	// currentComponent.__hooks
 
 	const hooks = currentComponent.__hooks;
 	if (hooks) {

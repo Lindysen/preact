@@ -48,26 +48,29 @@ export function render(vnode, parentDom, replaceNode) {
 	// List of effects that need to be called after diffing.
 	let commitQueue = []; // components list
 	diff(
-		parentDom,
+		parentDom, // 这个使用parentDom的_children属性已经指向[vnode]了
 		// Determine the new vnode tree and store it on the DOM element on
 		// our custom `_children` property.
+		// 确定新的 vnode 树并将其存储在 DOM 元素上
+		// 我们自定义的 `_children` 属性。
 		vnode,
 		oldVNode || EMPTY_OBJ,
 		EMPTY_OBJ,
 		parentDom.ownerSVGElement !== undefined,// issvg
-		!isHydrating && replaceNode // excessDomChildren
+		!isHydrating && replaceNode // excessDomChildren 这个参数用来做dom复用的作用
 			? [replaceNode]
 			: oldVNode
 			? null
 			: parentDom.firstChild
-			? slice.call(parentDom.childNodes)
+			? slice.call(parentDom.childNodes)// 如果parentDom有子节点就会把整个子节点作为待复用的节点使用
 			: null,
 		commitQueue,
-		!isHydrating && replaceNode
+		!isHydrating && replaceNode // oldDom
 			? replaceNode
 			: oldVNode
 			? oldVNode._dom
-			: parentDom.firstChild,
+			: parentDom.firstChild, // oldVNode 存在 就取 oldVNode._dom (更新)
+			// 不然就取 parentDom.firstChild 第一次渲染的时候
 		isHydrating
 	);
 

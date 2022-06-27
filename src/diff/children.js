@@ -39,8 +39,9 @@ export function diffChildren(
 
 	// This is a compression of oldParentVNode!=null && oldParentVNode != EMPTY_OBJ && oldParentVNode._children || EMPTY_ARR
 	// as EMPTY_OBJ._children should be `undefined`.
+	//老节点的children
 	let oldChildren = (oldParentVNode && oldParentVNode._children) || EMPTY_ARR;
-
+ //老节点长度
 	let oldChildrenLength = oldChildren.length;
 
 	newParentVNode._children = [];
@@ -106,6 +107,7 @@ export function diffChildren(
 		oldVNode = oldChildren[i];
 
 		if (
+			// 如果老节点为null 或者新老子节点的key和type相同，则设置老节点undefined，以便后面不执行unmount和参与后续节点的比较
 			oldVNode === null ||
 			(oldVNode &&
 				childVNode.key == oldVNode.key &&
@@ -119,6 +121,7 @@ export function diffChildren(
 				oldVNode = oldChildren[j];
 				// If childVNode is unkeyed, we only match similarly unkeyed nodes, otherwise we match by key.
 				// We always match by type (in either case).
+				//在老的子节点中循环 以便找到新子节点相对应的节点，有相对应的就会复用这个节点
 				if (
 					oldVNode &&
 					childVNode.key == oldVNode.key &&
@@ -127,12 +130,15 @@ export function diffChildren(
 					oldChildren[j] = undefined;
 					break;
 				}
+				 //都没匹配 老节点为null
 				oldVNode = null;
 			}
 		}
-
+   // 有可以复用的 oldVNode 就用
+	 // 不然就EMPTY_OBJ 去进行 childVNode 的创建
 		oldVNode = oldVNode || EMPTY_OBJ;
-
+    //对比节点
+		// 将旧元素变形为新元素，但不要将其附加到 dom
 		// Morph the old element into the new one, but don't append it to the dom yet
 		diff(
 			parentDom,
@@ -147,14 +153,16 @@ export function diffChildren(
 		);
 
 		newDom = childVNode._dom;
-
+    // 如果新老节点的ref不相同，推到refs数组中后面会应用ref
 		if ((j = childVNode.ref) && oldVNode.ref != j) {
 			if (!refs) refs = [];
 			if (oldVNode.ref) refs.push(oldVNode.ref, null, childVNode);
 			refs.push(j, childVNode._component || newDom, childVNode);
 		}
 
+   // 如果newDom
 		if (newDom != null) {
+     // 处理firstChildDom
 			if (firstChildDom == null) {
 				firstChildDom = newDom;
 			}
@@ -189,14 +197,14 @@ export function diffChildren(
 				// node's nextSibling.
 				newParentVNode._nextDom = oldDom;
 			}
-		} else if (
+		} else if (// newDom == null
 			oldDom &&
 			oldVNode._dom == oldDom &&
 			oldDom.parentNode != parentDom
 		) {
 			// The above condition is to handle null placeholders. See test in placeholder.test.js:
 			// `efficiently replace null placeholders in parent rerenders`
-			oldDom = getDomSibling(oldVNode);
+			oldDom = getDomSibling(oldVNode);// 从 vnode 的兄弟节点继续搜索,寻求他的下一个兄弟节点
 		}
 	}
 
@@ -215,7 +223,7 @@ export function diffChildren(
 				// _nextDom to it
 				newParentVNode._nextDom = getDomSibling(oldParentVNode, i + 1);
 			}
-
+      // 卸载不使用的老虚拟节点
 			unmount(oldChildren[i], oldChildren[i]);
 		}
 	}
@@ -239,6 +247,9 @@ function reorderChildren(childVNode, oldDom, parentDom) {
 			// oldVNode._children to newVNode._children. If that is the case, we need
 			// to update the old children's _parent pointer to point to the newVNode
 			// (childVNode here).
+
+			// 我们在其中复制 oldVNode._children 到 newVNode._children。如果是这样，我们需要
+			// 更新老孩子的 _parent 指针以指向 newVNode（此处为 childVNode）。
 			vnode._parent = childVNode;
 
 			if (typeof vnode.type == 'function') {
@@ -261,6 +272,7 @@ function reorderChildren(childVNode, oldDom, parentDom) {
 
 /**
  * Flatten and loop through the children of a virtual node
+ * 展平并循环遍历虚拟节点的子节点
  * @param {import('../index').ComponentChildren} children The unflattened
  * children of a virtual node
  * @returns {import('../internal').VNode[]}

@@ -18,6 +18,7 @@ export function Component(props, context) {
 
 /**
  * Update component state and schedule a re-render.
+ * 更新组件state 调度 re-render
  * @this {import('./internal').Component}
  * @param {object | ((s: object, p: object) => object)} update A hash of state
  * properties to update with new values or a function that given the current
@@ -66,6 +67,9 @@ Component.prototype.forceUpdate = function(callback) {
 		// Set render mode so that we can differentiate where the render request
 		// is coming from. We need this because forceUpdate should never call
 		// shouldComponentUpdate
+		 // 设置渲染模式，以便我们可以区分渲染请求的位置
+    // 来自。我们需要这个，因为 forceUpdate 永远不应该调用
+    // 应该组件更新
 		this._force = true;
 		if (callback) this._renderCallbacks.push(callback);
 		// 设置_force来标记是强制渲染，然后加入渲染队列并渲染。如果_force为真，则在diff渲染中不会触发组件的某些生命周期。
@@ -145,9 +149,9 @@ function renderComponent(component) {
 			oldVNode,
 			component._globalContext,
 			parentDom.ownerSVGElement !== undefined,
-			vnode._hydrating != null ? [oldDom] : null,
+			vnode._hydrating != null ? [oldDom] : null, // excessDomChildren
 			commitQueue,
-			oldDom == null ? getDomSibling(vnode) : oldDom,
+			oldDom == null ? getDomSibling(vnode) : oldDom, // oldDom
 			vnode._hydrating
 		);
 		 // 渲染完成时执行did生命周期和setState回调

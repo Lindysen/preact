@@ -68,6 +68,10 @@ export function createVNode(type, props, key, ref, original) {
 		// be set to dom.nextSibling which can return `null` and it is important
 		// to be able to distinguish between an uninitialized _nextDom and
 		// a _nextDom that has been set to `null`
+		// nextDom 必须初始化为未定义的 b/c 它最终会
+    // 设置为可以返回 `null` 的 dom.nextSibling，这很重要
+    // 能够区分未初始化的 _nextDom 和
+    // 一个已设置为 `null` 的 _nextDom
 		_nextDom: undefined,
 		_component: null,
 		_hydrating: null,
