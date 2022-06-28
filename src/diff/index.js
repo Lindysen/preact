@@ -180,6 +180,7 @@ export function diff(
 				}
 			}
 
+
 			c.context = componentContext;
 			c.props = newProps;
 			c._vnode = newVNode;
@@ -348,9 +349,8 @@ function diffElementNodes(
   // 判断是否是svg
 	// Tracks entering and exiting SVG namespace when descending through the tree.
 	if (nodeType === 'svg') isSvg = true;
-
+  //  判断能否复用excessDomChildren中的dom
 	if (excessDomChildren != null) {
-		//  判断能否复用excessDomChildren中的dom
 		for (; i < excessDomChildren.length; i++) {
 			const child = excessDomChildren[i];
 
@@ -372,8 +372,7 @@ function diffElementNodes(
 			}
 		}
 	}
-  // 说明oldVnode._dom == null
-	// 由于是第一次渲染所以不能复用原有的dom, 需要创建dom节点
+  // 说明oldVnode._dom == null 就创建一下 方便下面操作
 	if (dom == null) {
 		if (nodeType === null) {
 			// @ts-ignore createTextNode returns Text, we expect PreactElement
@@ -426,11 +425,15 @@ function diffElementNodes(
 			if (excessDomChildren != null) {
 				oldProps = {};
 				for (i = 0; i < dom.attributes.length; i++) {
+					// 把dom 的attributes搬到 oldProps 对象上
 					oldProps[dom.attributes[i].name] = dom.attributes[i].value;
 				}
 			}
 
 			if (newHtml || oldHtml) {
+				// newHtml 不存在 则 dom.innerHTML = ''
+				// newHtml 存在 则 dom.innerHTML= newHtml.__html
+				// newHtml 和 oldHtml 不同 或者  newHtml.__html !== dom.innerHTML 则 dom.innerHTML= newHtml.__html
 				// Avoid re-applying the same '__html' if it did not changed between re-render
 				if (
 					!newHtml ||
@@ -451,7 +454,7 @@ function diffElementNodes(
 			i = newVNode.props.children;
 			diffChildren(
 				dom, // oldVNode._dom
-				Array.isArray(i) ? i : [i], // renderResult
+				Array.isArray(i) ? i : [i], // renderResult newVNode.props.children
 				newVNode,
 				oldVNode,
 				globalContext,
@@ -478,6 +481,8 @@ function diffElementNodes(
 				'value' in newProps &&
 				(i = newProps.value) !== undefined &&
 				// #2756 For the <progress>-element the initial value is 0,
+				//尽管该属性不存在。当属性  缺少进度条被视为不确定。
+        //为了解决这个问题，我们总是在进度元素为 0 时更新它
 				// despite the attribute not being present. When the attribute
 				// is missing the progress bar is treated as indeterminate.
 				// To fix that we'll always update it when it is 0 for progress elements

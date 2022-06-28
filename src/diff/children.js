@@ -197,11 +197,12 @@ export function diffChildren(
 				// node's nextSibling.
 				newParentVNode._nextDom = oldDom;
 			}
-		} else if (// newDom == null
+		} else if (
 			oldDom &&
 			oldVNode._dom == oldDom &&
 			oldDom.parentNode != parentDom
 		) {
+			// 上述条件是处理空占位符。请参阅 placeholder.test.js 中的测试： `有效地替换父级重新渲染中的空占位符`
 			// The above condition is to handle null placeholders. See test in placeholder.test.js:
 			// `efficiently replace null placeholders in parent rerenders`
 			oldDom = getDomSibling(oldVNode);// 从 vnode 的兄弟节点继续搜索,寻求他的下一个兄弟节点
